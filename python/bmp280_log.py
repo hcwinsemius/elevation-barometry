@@ -63,7 +63,7 @@ def read_bmp280(ser, duration=None):
     print ser.readline()
     # start with an empty DataFrame
     df = pd.DataFrame()
-    header = ser.readline().rstrip().split(',')[1:]
+    header = ser.readline().rstrip().split(', ')[1:]
     print header
     print('Reading from {:s}'.format(ser.port))
     print('If you want to stop reading and write an excel sheet, please disconnect or reset the Arduino')
