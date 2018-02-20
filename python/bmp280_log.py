@@ -86,7 +86,7 @@ def read_bmp280(ser, duration=None):
     df.index.name = 'time'
     return df
 
-def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True):
+def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate=9600):
     """
     Logs comma separated values from Arduino connected BMP280, assuming the first line is a message to start
     monitoring, the second line is the header, and all lines below are 3 comma separated values (pressure, temperature
@@ -102,7 +102,7 @@ def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True):
     if port is None:
         print('Cannot read from Arduino')
         return None
-    ser = serial.Serial(port, 9600, timeout=timeout)
+    ser = serial.Serial(port, baud_rate, timeout=timeout)
 
     if not(os.path.isdir(path)):
         os.makedirs(path)
