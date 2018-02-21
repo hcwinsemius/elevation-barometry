@@ -50,7 +50,7 @@ def create_log_filename(path, prefix):
     """
     return os.path.join(path, '{:s}_{:s}.csv'.format(prefix, datetime.datetime.now().strftime('%Y%m%dT%H%M%S')))
 
-def read_bmp280(ser, duration=None):
+def read_bmp280(ser, duration=None, skiplines=0):
     """
     Reads BMP280 on Arduino from a serial connection, assuming the first line is a message to start
     monitoring, the second line is the header, and all lines below are 3 comma separated values (pressure, temperature
@@ -60,10 +60,13 @@ def read_bmp280(ser, duration=None):
         data
     :return: df
     """
-    print ser.readline()
+    for l in range(skiplines):
+        # skip a defined set of lines
+        ser.readline()
     # start with an empty DataFrame
     df = pd.DataFrame()
-    header = ser.readline().rstrip().split(', ')[1:]
+    header = ser.readline().rstrip().split(', ')
+#     import pdb;pdb.set_trace()
     print header
     print('Reading from {:s}'.format(ser.port))
     print('If you want to stop reading and write an excel sheet, please disconnect or reset the Arduino')
@@ -86,7 +89,7 @@ def read_bmp280(ser, duration=None):
     df.index.name = 'time'
     return df
 
-def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate=9600):
+def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate=9600, skiplines=0):
     """
     Logs comma separated values from Arduino connected BMP280, assuming the first line is a message to start
     monitoring, the second line is the header, and all lines below are 3 comma separated values (pressure, temperature
@@ -94,8 +97,12 @@ def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate
 
     :param path: str - path to output log file
     :param prefix: str - prefix to output log file
-    :param timeout: str - timeout, function stops reading when timeout is reached
-    :return: None (a file with logged values is written instead)
+    :param timeout=5: int - function stops reading when serial port is quiet for <timeout> seconds
+    :param duration=None: int - if set to a number, functions stops reading when it has read for <duration> seconds
+    :param write_csv=True: bool - if set, a csv file with results is written to <path>/<prefix>_<yyyymmddTHHMMSS>.csv
+    :param baud_rate: int - baud rate to read serial port with
+    :param skiplines: int - amount of lines to skip before reaching the comma-separated header
+    :return: df (and a written file if write_csv set to True
     """
     fn = create_log_filename(path, prefix)
     port = find_arduino()
@@ -107,7 +114,7 @@ def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate
     if not(os.path.isdir(path)):
         os.makedirs(path)
     # read the pd.DataFrame, disconnect or reset Arduino to stop this function and return a pd.DataFrame
-    df = read_bmp280(ser, duration=duration)
+    df = read_bmp280(ser, skiplines=skiplines, duration=duration)
     # close connection and write pd.DataFrame to file
     ser.close()
     # write pd.DataFrame object to file

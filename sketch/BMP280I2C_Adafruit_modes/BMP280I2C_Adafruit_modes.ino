@@ -72,7 +72,7 @@ void setup () {
        Serial.println("Found UNKNOWN sensor! Error!");
   }
   String header = "";
-  header = "Temperature (°C),Pressure (Pa)";
+  header = "Temperature (°C), Pressure (Pa)";
   Serial.println(header);
 }
 
