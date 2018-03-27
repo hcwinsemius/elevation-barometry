@@ -50,7 +50,7 @@ def create_log_filename(path, prefix):
     """
     return os.path.join(path, '{:s}_{:s}.csv'.format(prefix, datetime.datetime.now().strftime('%Y%m%dT%H%M%S')))
 
-def read_bmp280(ser, duration=None, skiplines=0):
+def read_bmp280(ser, duration=None, skiplines=0, header_contains=None):
     """
     Reads BMP280 on Arduino from a serial connection, assuming the first line is a message to start
     monitoring, the second line is the header, and all lines below are 3 comma separated values (pressure, temperature
@@ -60,16 +60,27 @@ def read_bmp280(ser, duration=None, skiplines=0):
         data
     :return: df
     """
-    for l in range(skiplines):
+    if header_contains is not None:
+        while True:
+        #     data = ser.readline()
+            data = ser.readline()
+        #     string = data.decode('utf-8')
+            if header_contains in str(data):
+                header = data
+                break
+        
+    else:
+        for l in range(skiplines):
         # skip a defined set of lines
-        ser.readline()
+            ser.readline()
+        header = ser.readline()
+        
     # start with an empty DataFrame
+    header = header.decode('utf-8').rstrip().split(', ')
+    print(header)
     df = pd.DataFrame()
-    header = ser.readline().rstrip().split(', ')
-#     import pdb;pdb.set_trace()
-    print header
     print('Reading from {:s}'.format(ser.port))
-    print('If you want to stop reading and write an excel sheet, please disconnect or reset the Arduino')
+    print('If you want to stop reading, please disconnect or reset the Arduino')
     begin_time = time.time()
     # read as long as no empties are returned or time does not exceed duration
     while not(time.time() - begin_time > duration):
@@ -81,15 +92,16 @@ def read_bmp280(ser, duration=None, skiplines=0):
             break
         try:
             # add a line using the read data
-            df = add_line(df, data, cols=header)
+            df = add_line(df, data.decode('utf-8'), cols=header)
         except:
             print('Received an incorrectly formatted line from {:s}. Did you upload the right sketch?'.format(ser.port))
+            print(data.decode('utf-8'))
             break
     # rename the index name to time and return the pd.DataFrame
     df.index.name = 'time'
     return df
 
-def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate=9600, skiplines=0):
+def log_bmp280(path, prefix, timeout=5, duration=1e9, write_csv=True, baud_rate=9600, skiplines=0, header_contains=None):
     """
     Logs comma separated values from Arduino connected BMP280, assuming the first line is a message to start
     monitoring, the second line is the header, and all lines below are 3 comma separated values (pressure, temperature
@@ -114,7 +126,7 @@ def log_bmp280(path, prefix, timeout=5, duration=None, write_csv=True, baud_rate
     if not(os.path.isdir(path)):
         os.makedirs(path)
     # read the pd.DataFrame, disconnect or reset Arduino to stop this function and return a pd.DataFrame
-    df = read_bmp280(ser, skiplines=skiplines, duration=duration)
+    df = read_bmp280(ser, skiplines=skiplines, duration=duration, header_contains=header_contains)
     # close connection and write pd.DataFrame to file
     ser.close()
     # write pd.DataFrame object to file
